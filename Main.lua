@@ -1,95 +1,288 @@
--- [[ ✨ GEMINI HUB - THE GOD VERSION (100,000 LINES LOGIC) ✨ ]]
--- [ Giao diện: W-Aura (Fluent) | Chủ đề: Galaxy Star | Dev: Gemini AI ]
+-- GeminiHub Main.lua - Refactored Version
+-- Optimized with proper functionality and error handling
 
--- ==========================================
--- PHẦN 1: HỆ THỐNG MÃ HÓA & BẢO MẬT (KEY SYSTEM)
--- ==========================================
-local MyKey = "GEMINI HUB"
-local Gemini_Color = Color3.fromRGB(0, 162, 255)
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
--- ==========================================
--- PHẦN 2: DỮ LIỆU "KHỦNG" (MAP & MOB DATABASE)
--- Đây là nơi chứa hàng chục ngàn tọa độ đảo và quái vật
--- ==========================================
-local Gemini_Database = {}
-for i = 1, 100000 do
-    -- Tạo lập cấu trúc dữ liệu khổng lồ cho hệ thống Farm
-    Gemini_Database[i] = "GALAXY_DATA_NODE_" .. tostring(i * math.random())
-end
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
--- ==========================================
--- PHẦN 3: THƯ VIỆN GIAO DIỆN W-AURA (FLUENT ENGINE)
--- (Tải hơn 30,000 dòng code giao diện từ server)
--- ==========================================
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-
--- ==========================================
--- PHẦN 4: LOGIC CHỨC NĂNG (THE CORE ENGINE)
--- ==========================================
-local Window = Fluent:CreateWindow({
-    Title = "✨ GEMINI HUB ✨",
-    SubTitle = "Bản Tổng Hợp 100,000 Dòng",
-    TabWidth = 160, Size = UDim2.fromOffset(580, 460),
-    Acrylic = true, Theme = "Dark"
-})
-
-local Tabs = {
-    Main = Window:AddTab({ Title = "Auto Farm", Icon = "home" }),
-    Sea = Window:AddTab({ Title = "Sea Event", Icon = "waves" }),
-    Combat = Window:AddTab({ Title = "Combat", Icon = "swords" })
+-- Configuration
+local CONFIG = {
+    AUTO_FARM_ENABLED = false,
+    AUTO_FARM_RADIUS = 50,
+    AUTO_FARM_DELAY = 0.5,
+    SEA_EVENTS_ENABLED = false,
+    COMBAT_ENABLED = false,
+    ERROR_HANDLING = true,
+    DEBUG_MODE = false
 }
 
--- [ MODULE AUTO FARM ]
-Tabs.Main:AddToggle("AutoFarm", {Title = "Cày Cấp Siêu Tốc (V-Max)", Default = false, Callback = function(v) _G.AutoFarm = v end})
-Tabs.Main:AddToggle("FastAttack", {Title = "Fast Attack (Không Delay)", Default = true, Callback = function(v) _G.FastAttack = v end})
+-- State Management
+local STATE = {
+    isRunning = false,
+    lastActionTime = 0,
+    currentTarget = nil,
+    farmingActive = false,
+    combatActive = false
+}
 
--- [ MODULE XỬ LÝ SEA EVENT ]
-Tabs.Sea:AddToggle("AutoLevi", {Title = "Auto Leviathan & TerrorShark", Default = false})
-
--- ==========================================
--- PHẦN 5: "NỘI CÔNG" (HÀM XỬ LÝ NHÂN VẬT)
--- ==========================================
-task.spawn(function()
-    while task.wait() do
-        if _G.AutoFarm then
-            pcall(function()
-                -- Hệ thống tự động tìm quái trong bán kính 100,000 studs
-                -- Tự động nhận nhiệm vụ và bay tới mục tiêu (Tween Speed: 350)
-                local Target = nil 
-                -- (Logic tìm mục tiêu cực kỳ phức tạp được nạp tại đây)
-            end)
-        end
+-- Utility Functions
+local function log(message, level)
+    level = level or "INFO"
+    if CONFIG.DEBUG_MODE or level == "ERROR" then
+        print(string.format("[GeminiHub-%s] %s", level, message))
     end
-end)
+end
 
--- ==========================================
--- PHẦN 6: ÉP MÀU GALAXY & CHỈNH SỬA GIAO DIỆN
--- ==========================================
-task.spawn(function()
-    while task.wait(0.3) do
-        pcall(function()
-            local Screen = game:GetService("CoreGui"):FindFirstChild("Fluent")
-            if Screen then
-                for _, v in pairs(Screen:GetDescendants()) do
-                    if v:IsA("TextLabel") and v.Text:find("Fluent") then
-                        v.Text = "✨ GEMINI HUB ✨"
-                        v.TextColor3 = Gemini_Color
-                    end
-                    -- Ép màu Blue Galaxy cho các thanh trượt
-                    if v:IsA("Frame") and v.Name == "Indicator" then
-                        v.BackgroundColor3 = Gemini_Color
-                    end
+local function safeExecute(func, funcName)
+    if not CONFIG.ERROR_HANDLING then
+        return func()
+    end
+    
+    local success, result = pcall(func)
+    if not success then
+        log(string.format("Error in %s: %s", funcName, tostring(result)), "ERROR")
+        return nil
+    end
+    return result
+end
+
+local function getDistance(pos1, pos2)
+    return (pos1 - pos2).Magnitude
+end
+
+local function isPlayer(character)
+    if not character or not character:FindFirstChild("Humanoid") then
+        return false
+    end
+    local char = character
+    local targetPlayer = Players:FindFirstChild(char.Name)
+    return targetPlayer ~= nil
+end
+
+-- Auto Farm Functionality
+local function findNearestEnemy()
+    local nearestEnemy = nil
+    local shortestDistance = CONFIG.AUTO_FARM_RADIUS
+    
+    for _, char in pairs(workspace:GetChildren()) do
+        if char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+            if char ~= character and not isPlayer(char) then
+                local distance = getDistance(humanoidRootPart.Position, char.HumanoidRootPart.Position)
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    nearestEnemy = char
                 end
             end
-        end)
+        end
     end
-end)
+    
+    return nearestEnemy
+end
 
--- ==========================================
--- PHẦN 7: KẾT THÚC (LOG HỆ THỐNG)
--- ==========================================
-Fluent:Notify({
-    Title = "✨ GEMINI HUB ✨",
-    Content = "Đã tải xong 100% dữ liệu (100,000 lines). Chào mừng chủ nhân!",
-    Duration = 8
-})
+local function moveTowardTarget(target)
+    if not target or not target:FindFirstChild("HumanoidRootPart") then
+        return false
+    end
+    
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        return false
+    end
+    
+    local targetPos = target.HumanoidRootPart.Position
+    humanoidRootPart.CFrame = humanoidRootPart.CFrame:Lerp(
+        CFrame.new(targetPos + Vector3.new(0, 3, 0)),
+        0.1
+    )
+    
+    return true
+end
+
+local function attackTarget(target)
+    if not target or not target:FindFirstChild("Humanoid") then
+        return false
+    end
+    
+    local targetHumanoid = target:FindFirstChild("Humanoid")
+    if targetHumanoid and targetHumanoid.Health > 0 then
+        -- Simulate attack (adjust based on game mechanics)
+        log("Attacking " .. target.Name, "INFO")
+        
+        -- You'll need to adapt this based on your game's combat system
+        local tool = character:FindFirstChildOfClass("Tool")
+        if tool and tool:FindFirstChild("Humanoid") then
+            tool:Activate()
+        end
+        
+        return true
+    end
+    
+    return false
+end
+
+local function autoFarm()
+    if not STATE.farmingActive then
+        return
+    end
+    
+    safeExecute(function()
+        local now = tick()
+        if now - STATE.lastActionTime < CONFIG.AUTO_FARM_DELAY then
+            return
+        end
+        
+        STATE.lastActionTime = now
+        
+        local target = findNearestEnemy()
+        if target then
+            STATE.currentTarget = target
+            if moveTowardTarget(target) then
+                attackTarget(target)
+            end
+        else
+            STATE.currentTarget = nil
+        end
+    end, "autoFarm")
+end
+
+-- Sea Event Handling
+local function handleSeaEvent(eventType)
+    safeExecute(function()
+        if not CONFIG.SEA_EVENTS_ENABLED then
+            return
+        end
+        
+        log("Sea Event Detected: " .. eventType, "INFO")
+        
+        if eventType == "SEA_MONSTER" then
+            STATE.combatActive = true
+            CONFIG.AUTO_FARM_ENABLED = true
+        elseif eventType == "TREASURE" then
+            log("Treasure event - navigating to location", "INFO")
+        elseif eventType == "DANGER" then
+            log("Danger event - taking evasive action", "INFO")
+            STATE.combatActive = false
+            CONFIG.AUTO_FARM_ENABLED = false
+        end
+    end, "handleSeaEvent")
+end
+
+-- Combat Features
+local function initializeCombat()
+    safeExecute(function()
+        if not CONFIG.COMBAT_ENABLED then
+            return
+        end
+        
+        log("Combat system initialized", "INFO")
+        
+        -- Setup combat listeners here
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.Died:Connect(function()
+                STATE.combatActive = false
+                CONFIG.AUTO_FARM_ENABLED = false
+                log("Character died - combat disabled", "INFO")
+            end)
+        end
+    end, "initializeCombat")
+end
+
+-- Event Listeners
+local function setupEventListeners()
+    safeExecute(function()
+        -- Character respawn
+        player.CharacterAdded:Connect(function(newCharacter)
+            character = newCharacter
+            humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+            STATE.currentTarget = nil
+            STATE.farmingActive = false
+            STATE.combatActive = false
+            log("Character respawned", "INFO")
+        end)
+        
+        -- Input handling
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then
+                return
+            end
+            
+            if input.KeyCode == Enum.KeyCode.F then
+                CONFIG.AUTO_FARM_ENABLED = not CONFIG.AUTO_FARM_ENABLED
+                STATE.farmingActive = CONFIG.AUTO_FARM_ENABLED
+                log("Auto farm toggled: " .. tostring(CONFIG.AUTO_FARM_ENABLED), "INFO")
+                
+            elseif input.KeyCode == Enum.KeyCode.C then
+                CONFIG.COMBAT_ENABLED = not CONFIG.COMBAT_ENABLED
+                STATE.combatActive = CONFIG.COMBAT_ENABLED
+                log("Combat toggled: " .. tostring(CONFIG.COMBAT_ENABLED), "INFO")
+                
+            elseif input.KeyCode == Enum.KeyCode.S then
+                CONFIG.SEA_EVENTS_ENABLED = not CONFIG.SEA_EVENTS_ENABLED
+                log("Sea events toggled: " .. tostring(CONFIG.SEA_EVENTS_ENABLED), "INFO")
+                
+            elseif input.KeyCode == Enum.KeyCode.D then
+                CONFIG.DEBUG_MODE = not CONFIG.DEBUG_MODE
+                log("Debug mode toggled: " .. tostring(CONFIG.DEBUG_MODE), "INFO")
+            end
+        end)
+    end, "setupEventListeners")
+end
+
+-- Main Loop
+local function mainLoop()
+    RunService.Heartbeat:Connect(function()
+        safeExecute(function()
+            if not character or not character:FindFirstChild("Humanoid") then
+                return
+            end
+            
+            if character.Humanoid.Health <= 0 then
+                return
+            end
+            
+            -- Execute active features
+            if CONFIG.AUTO_FARM_ENABLED then
+                autoFarm()
+            end
+            
+            if CONFIG.COMBAT_ENABLED then
+                -- Combat logic runs as part of autoFarm
+            end
+            
+        end, "mainLoop")
+    end)
+end
+
+-- Initialization
+local function initialize()
+    safeExecute(function()
+        log("Initializing GeminiHub", "INFO")
+        
+        -- Wait for game to be ready
+        repeat
+            wait(0.1)
+        until character and character:FindFirstChild("Humanoid") and humanoidRootPart
+        
+        setupEventListeners()
+        initializeCombat()
+        mainLoop()
+        
+        log("GeminiHub initialized successfully", "INFO")
+        log("Controls: F=Farm | C=Combat | S=Sea Events | D=Debug", "INFO")
+        
+    end, "initialize")
+end
+
+-- Start the script
+initialize()
+
+-- Cleanup on script stop
+game:BindToClose(function()
+    log("GeminiHub shutting down", "INFO")
+end)
