@@ -1,440 +1,68 @@
---[[
-    GeminiHub - Main.lua
-    Complete Refactored Version with Fluent UI
-    Features: Auto Farm, Sea Events, Combat, Utilities
-    Last Updated: 2025-12-29
-]]
+-- ============================================
+-- REDZ HUB PREMIUM - BLOX FRUIT AUTOMATION
+-- COMPLETE SCRIPT V3.5 (MINIFIED)
+-- ============================================
 
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
-
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-
--- ====== CONFIG ======
-local Config = {
-    AutoFarm = {
-        Enabled = false,
-        AutoAttack = false,
-        AutoCollect = false,
-        TargetDistance = 100,
-        WalkSpeed = 16,
-    },
-    SeaEvents = {
-        Enabled = false,
-        AutoComplete = false,
-        AutoJoin = false,
-    },
-    Combat = {
-        Enabled = false,
-        AutoDodge = false,
-        AutoTarget = false,
-        CombatRange = 50,
-    },
-    Utility = {
-        SpeedBoost = false,
-        NoClip = false,
-        GodMode = false,
-        InfiniteJump = false,
-    }
-}
-
--- ====== UI SETUP ======
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "GeminiHubUI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
--- Main Menu Frame (Fluent Design)
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainMenu"
-mainFrame.Size = UDim2.new(0, 450, 0, 600)
-mainFrame.Position = UDim2.new(0.5, -225, 0.5, -300)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
-
--- Title Bar
-local titleBar = Instance.new("Frame")
-titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 50)
-titleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-titleBar.BorderSizePixel = 0
-titleBar.Parent = mainFrame
-
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(1, -60, 1, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-titleLabel.TextSize = 20
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Text = "✨ GeminiHub - v2.0"
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = titleBar
-
--- Close Button
-local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "CloseBtn"
-closeBtn.Size = UDim2.new(0, 50, 0, 50)
-closeBtn.Position = UDim2.new(1, -50, 0, 0)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextSize = 18
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.Text = "×"
-closeBtn.BorderSizePixel = 0
-closeBtn.Parent = titleBar
-
-closeBtn.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-end)
-
--- Tab Container
-local tabContainer = Instance.new("Frame")
-tabContainer.Name = "TabContainer"
-tabContainer.Size = UDim2.new(0, 100, 1, -50)
-tabContainer.Position = UDim2.new(0, 0, 0, 50)
-tabContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-tabContainer.BorderSizePixel = 0
-tabContainer.Parent = mainFrame
-
--- Content Container
-local contentContainer = Instance.new("Frame")
-contentContainer.Name = "ContentContainer"
-contentContainer.Size = UDim2.new(1, -100, 1, -50)
-contentContainer.Position = UDim2.new(0, 100, 0, 50)
-contentContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-contentContainer.BorderSizePixel = 0
-contentContainer.Parent = mainFrame
-
--- ====== UI HELPER FUNCTIONS ======
-local function createTab(tabName, icon)
-    local tabButton = Instance.new("TextButton")
-    tabButton.Name = tabName .. "Tab"
-    tabButton.Size = UDim2.new(1, 0, 0, 60)
-    tabButton.Position = UDim2.new(0, 0, 0, (#tabContainer:GetChildren() - 1) * 60)
-    tabButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    tabButton.BorderSizePixel = 0
-    tabButton.TextColor3 = Color3.fromRGB(150, 150, 150)
-    tabButton.TextSize = 14
-    tabButton.Font = Enum.Font.Gotham
-    tabButton.Text = icon .. "\n" .. tabName
-    tabButton.Parent = tabContainer
-    
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Name = tabName .. "Content"
-    contentFrame.Size = UDim2.new(1, 0, 1, 0)
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.Visible = false
-    contentFrame.Parent = contentContainer
-    
-    local uiListLayout = Instance.new("UIListLayout")
-    uiListLayout.Padding = UDim.new(0, 10)
-    uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    uiListLayout.Parent = contentFrame
-    
-    tabButton.MouseButton1Click:Connect(function()
-        for _, child in ipairs(contentContainer:GetChildren()) do
-            if child:IsA("Frame") then
-                child.Visible = false
-            end
-        end
-        contentFrame.Visible = true
-        
-        for _, btn in ipairs(tabContainer:GetChildren()) do
-            if btn:IsA("TextButton") then
-                btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-            end
-        end
-        tabButton.BackgroundColor3 = Color3.fromRGB(50, 100, 150)
-    end)
-    
-    return contentFrame
-end
-
-local function createToggle(parent, text, callback)
-    local toggleContainer = Instance.new("Frame")
-    toggleContainer.Name = text
-    toggleContainer.Size = UDim2.new(1, -20, 0, 40)
-    toggleContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    toggleContainer.BorderSizePixel = 0
-    toggleContainer.Parent = parent
-    
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Text = text
-    textLabel.Size = UDim2.new(1, -60, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    textLabel.TextSize = 14
-    textLabel.Font = Enum.Font.Gotham
-    textLabel.TextXAlignment = Enum.TextXAlignment.Left
-    textLabel.Parent = toggleContainer
-    
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Name = "Toggle"
-    toggleButton.Size = UDim2.new(0, 50, 0, 25)
-    toggleButton.Position = UDim2.new(1, -60, 0.5, -12.5)
-    toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    toggleButton.TextSize = 0
-    toggleButton.BorderSizePixel = 0
-    toggleButton.Parent = toggleContainer
-    
-    local state = false
-    toggleButton.MouseButton1Click:Connect(function()
-        state = not state
-        toggleButton.BackgroundColor3 = state and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(100, 100, 100)
-        callback(state)
-    end)
-    
-    return toggleButton, toggleContainer
-end
-
-local function createButton(parent, text, callback)
-    local button = Instance.new("TextButton")
-    button.Name = text
-    button.Size = UDim2.new(1, -20, 0, 35)
-    button.BackgroundColor3 = Color3.fromRGB(50, 100, 150)
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 14
-    button.Font = Enum.Font.GothamBold
-    button.Text = text
-    button.BorderSizePixel = 0
-    button.Parent = parent
-    
-    button.MouseButton1Click:Connect(callback)
-    
-    return button
-end
-
--- ====== CREATE TABS ======
-local autoFarmTab = createTab("Auto Farm", "🌾")
-local seaEventsTab = createTab("Sea Events", "🌊")
-local combatTab = createTab("Combat", "⚔️")
-local utilityTab = createTab("Utility", "🛠️")
-
--- Show first tab by default
-autoFarmTab.Visible = true
-tabContainer:GetChildren()[1].BackgroundColor3 = Color3.fromRGB(50, 100, 150)
-
--- ====== AUTO FARM TAB ======
-createToggle(autoFarmTab, "Enable Auto Farm", function(state)
-    Config.AutoFarm.Enabled = state
-end)
-
-createToggle(autoFarmTab, "Auto Attack", function(state)
-    Config.AutoFarm.AutoAttack = state
-end)
-
-createToggle(autoFarmTab, "Auto Collect", function(state)
-    Config.AutoFarm.AutoCollect = state
-end)
-
-createButton(autoFarmTab, "Farm Nearest", function()
-    print("🌾 Starting farm at nearest location...")
-end)
-
-createButton(autoFarmTab, "Auto Complete Quests", function()
-    print("📋 Auto completing quests...")
-end)
-
--- ====== SEA EVENTS TAB ======
-createToggle(seaEventsTab, "Enable Sea Events", function(state)
-    Config.SeaEvents.Enabled = state
-end)
-
-createToggle(seaEventsTab, "Auto Join Events", function(state)
-    Config.SeaEvents.AutoJoin = state
-end)
-
-createToggle(seaEventsTab, "Auto Complete", function(state)
-    Config.SeaEvents.AutoComplete = state
-end)
-
-createButton(seaEventsTab, "Join Event", function()
-    print("🌊 Joining sea event...")
-end)
-
-createButton(seaEventsTab, "Check Events", function()
-    print("🔍 Checking for active events...")
-end)
-
--- ====== COMBAT TAB ======
-createToggle(combatTab, "Enable Combat", function(state)
-    Config.Combat.Enabled = state
-end)
-
-createToggle(combatTab, "Auto Dodge", function(state)
-    Config.Combat.AutoDodge = state
-end)
-
-createToggle(combatTab, "Auto Target", function(state)
-    Config.Combat.AutoTarget = state
-end)
-
-createButton(combatTab, "Attack Nearest Enemy", function()
-    print("⚔️ Attacking nearest enemy...")
-end)
-
-createButton(combatTab, "Use Ultimate", function()
-    print("💥 Using ultimate ability...")
-end)
-
--- ====== UTILITY TAB ======
-createToggle(utilityTab, "Speed Boost", function(state)
-    Config.Utility.SpeedBoost = state
-    if state then
-        character.Humanoid.WalkSpeed = 50
-    else
-        character.Humanoid.WalkSpeed = 16
-    end
-end)
-
-createToggle(utilityTab, "No Clip", function(state)
-    Config.Utility.NoClip = state
-end)
-
-createToggle(utilityTab, "God Mode", function(state)
-    Config.Utility.GodMode = state
-end)
-
-createToggle(utilityTab, "Infinite Jump", function(state)
-    Config.Utility.InfiniteJump = state
-end)
-
-createButton(utilityTab, "Teleport to Spawn", function()
-    humanoidRootPart.CFrame = CFrame.new(0, 50, 0)
-    print("✨ Teleported to spawn!")
-end)
-
-createButton(utilityTab, "Heal", function()
-    character.Humanoid.Health = character.Humanoid.MaxHealth
-    print("💚 Healed!")
-end)
-
--- ====== FEATURE IMPLEMENTATIONS ======
-
--- Speed Boost
-local speedBoostConnection
-local function updateSpeedBoost()
-    if speedBoostConnection then speedBoostConnection:Disconnect() end
-    if Config.Utility.SpeedBoost then
-        speedBoostConnection = RunService.RenderStepped:Connect(function()
-            character.Humanoid.WalkSpeed = 50
-        end)
-    else
-        character.Humanoid.WalkSpeed = 16
-    end
-end
-
--- No Clip
-local noClipConnection
-local function updateNoClip()
-    if noClipConnection then noClipConnection:Disconnect() end
-    if Config.Utility.NoClip then
-        noClipConnection = RunService.RenderStepped:Connect(function()
-            if character and humanoidRootPart then
-                humanoidRootPart.CanCollide = false
-            end
-        end)
-    else
-        if character and humanoidRootPart then
-            humanoidRootPart.CanCollide = true
-        end
-    end
-end
-
--- God Mode
-local function updateGodMode()
-    if Config.Utility.GodMode then
-        character.Humanoid.MaxHealth = math.huge
-        character.Humanoid.Health = math.huge
-    else
-        character.Humanoid.MaxHealth = 100
-    end
-end
-
--- Infinite Jump
-local infiniteJumpConnection
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if Config.Utility.InfiniteJump and input.KeyCode == Enum.KeyCode.Space and not gameProcessed then
-        character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
-
--- Auto Farm Logic
-local farmConnection
-local function updateAutoFarm()
-    if farmConnection then farmConnection:Disconnect() end
-    if Config.AutoFarm.Enabled then
-        farmConnection = RunService.Heartbeat:Connect(function()
-            if Config.AutoFarm.AutoCollect then
-                -- Auto collect items
-                local items = workspace:FindPartByCFrame(humanoidRootPart.CFrame, 50)
-                if items then
-                    humanoidRootPart.CFrame = items.CFrame + Vector3.new(0, 3, 0)
-                end
-            end
-            
-            if Config.AutoFarm.AutoAttack then
-                -- Auto attack enemies
-                print("🌾 Auto attacking...")
-            end
-        end)
-    end
-end
-
--- Combat Auto Dodge
-local dodgeConnection
-local function updateCombatDodge()
-    if dodgeConnection then dodgeConnection:Disconnect() end
-    if Config.Combat.Enabled and Config.Combat.AutoDodge then
-        dodgeConnection = RunService.Heartbeat:Connect(function()
-            -- Dodge logic
-        end)
-    end
-end
-
--- ====== CHARACTER RESPAWN HANDLING ======
-player.CharacterAdded:Connect(function(newCharacter)
-    character = newCharacter
-    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    
-    -- Re-enable features for new character
-    updateSpeedBoost()
-    updateNoClip()
-    updateGodMode()
-    updateAutoFarm()
-    updateCombatDodge()
-end)
-
--- ====== KEYBOARD SHORTCUTS ======
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.F1 then
-        mainFrame.Visible = not mainFrame.Visible
-    elseif input.KeyCode == Enum.KeyCode.F2 then
-        Config.AutoFarm.Enabled = not Config.AutoFarm.Enabled
-    elseif input.KeyCode == Enum.KeyCode.F3 then
-        Config.Utility.SpeedBoost = not Config.Utility.SpeedBoost
-        updateSpeedBoost()
-    end
-end)
-
--- ====== INITIALIZATION ======
-updateSpeedBoost()
-updateNoClip()
-updateGodMode()
-updateAutoFarm()
-updateCombatDodge()
-
-print("✨ GeminiHub v2.0 Loaded Successfully!")
-print("📖 Keyboard Shortcuts:")
-print("   F1 - Toggle Menu")
-print("   F2 - Toggle Auto Farm")
-print("   F3 - Toggle Speed Boost")
+if not game:IsLoaded()then game.Loaded:Wait()end
+local Rayfield=loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local RS,PS,TS,WS,RSR,VIM,PSR,LI,CG,HS,UIS=game:GetService("RunService"),game:GetService("Players"),game:GetService("TweenService"),game:GetService("Workspace"),game:GetService("ReplicatedStorage"),game:GetService("VirtualInputManager"),game:FindFirstChildOfClass("PathfindingService"),game:GetService("Lighting"),game:GetService("CoreGui"),game:GetService("HttpService"),game:GetService("UserInputService")
+local Pl=PS.LocalPlayer local Ch=Pl.Character or Pl.CharacterAdded:Wait()local Hu=Ch:WaitForChild("Humanoid")local Mo=Pl:GetMouse()
+Pl.CharacterAdded:Connect(function(nc)Ch=nc Hu=Ch:WaitForChild("Humanoid")task.wait(1)end)
+getgenv().AF={E=false,Q=false,A=false,B=false,S=false}getgenv().AR={E=false,BC=false,IR=false}getgenv().SE={E=false,T={},AFE=false}getgenv().AS={E=false,P={"Melee","Defense","Sword","Fruit","Gun"}}getgenv().RF={AC=false,CT=false,AB=false,NC=false,IE=false,TPP=false,TPF=false,TPC=false,TPI=false,ESP={P=false,F=false,C=false,M=false,Q=false},ABF=false,AFB=false,AEH=false,ABQ=false,ADB=false,ARI=false,ASG=false,ABH=false,ABFS=false,ABS=false,ABG=false,ABA=false,AAF=true,HN=false,RH=false,ARC=false,IZ=false}
+local QM={NPCs={Sea1={{N="StartQG",P=CFrame.new(100,50,100),RL=1},{N="MiddleQG",P=CFrame.new(300,50,300),RL=15},{N="PirateQG",P=CFrame.new(500,50,500),RL=30}},Sea2={{N="DesertQG",P=CFrame.new(1500,50,1500),RL=100},{N="SnowQG",P=CFrame.new(1800,100,1800),RL=150}},Sea3={{N="PortQG",P=CFrame.new(3000,50,3000),RL=700},{N="CastleQG",P=CFrame.new(3500,100,3500),RL=800}}},Mobs={Sea1={{N="Bandit",P=CFrame.new(120,50,120),LR={1,20}},{N="Monkey",P=CFrame.new(350,50,350),LR={15,40}},{N="Gorilla",P=CFrame.new(550,50,550),LR={30,60}}},Sea2={{N="DesertBandit",P=CFrame.new(1600,50,1600),LR={100,200}},{N="SnowTrooper",P=CFrame.new(1900,100,1900),LR={150,250}}},Sea3={{N="GalleyPirate",P=CFrame.new(3100,50,3100),LR={700,850}},{N="ShipEngineer",P=CFrame.new(3600,100,3600),LR={800,950}}}},CQ=nil,CM=nil}
+local CE={AS=0.08,AR=25,BMR=30,AC=0,CF=nil,CTR=nil,ACTR=nil}local CV2={Melee={AC=false,CD=0.08,CR=20,HM=false},Sword={AS=false,SD=0.1,ZA=false,XA=false,CA=false,VA=false,FA=false},Gun={AS=false,SD=0.2,IA=false},Fruit={AZ=false,AX=false,AC=false,AV=false,AF=false,HFS=false}}
+local RSys={CR=nil,RC={"Flame","Ice","Quake","Light","Dark","String","Rumble","Magma","Human:Buddha"},RL={Sea1=CFrame.new(800,50,800),Sea2=CFrame.new(2200,50,2200),Sea3=CFrame.new(4200,50,4200)},Is={"I1","I2","I3","I4","I5"},CI=1}
+local SEv={AE={},EL={["SeaBeast"]={P=CFrame.new(800,-50,800),A=false},["TerrorShark"]={P=CFrame.new(1500,-100,1500),A=false},["Leviathan"]={P=CFrame.new(3000,-150,3000),A=false}}}
+local TDB={Is={["Starter"]=CFrame.new(100,50,100),["Jungle"]=CFrame.new(1500,100,1500),["PirateV"]=CFrame.new(2000,50,2000),["Desert"]=CFrame.new(3000,50,3000),["FrozenV"]=CFrame.new(4000,100,4000),["SkyI"]=CFrame.new(5000,500,5000)},Boss={["Saber"]=CFrame.new(1450,50,1450),["Darkbeard"]=CFrame.new(3500,0,3500),["CursedC"]=CFrame.new(4500,50,4500),["SoulR"]=CFrame.new(6000,50,6000)},Raid={["FlameR"]=CFrame.new(5000,50,5000),["IceR"]=CFrame.new(5500,50,5500),["DarkR"]=CFrame.new(6000,50,6000)}}
+local BF={CB=nil,B={"Saber","Darkbeard","CursedC","SoulR","DoughK","Stone"}}local SS={HC={"R","B","G","Y","P"},FS={"Combat","BlackLeg","Fishman","Electro","DragonB"},Sw={"Katana","Cutlass","DualK","TripleK","Bisento"},Ac={"BlackCape","SwordHat","PirateHat"}}
+local function SW(s)local st=tick()while tick()-st<s do if getgenv().AF.S then return false end RS.Heartbeat:Wait()end return true end
+local function GPL()local s,l=pcall(function()local ls=Pl:FindFirstChild("leaderstats")if ls then local ls=ls:FindFirstChild("Level")or ls:FindFirstChild("Lvl")if ls then return ls.Value end end local df=Pl:FindFirstChild("Data")if df then local ld=df:FindFirstChild("Level")if ld then return ld.Value end end return 1 end)return s and l or 1 end
+local function GCS()local l=GPL()if l>=700 then return"Sea3"elseif l>=100 then return"Sea2"else return"Sea1"end end
+local function GHRP()if Ch and Ch:FindFirstChild("HumanoidRootPart")then return Ch.HumanoidRootPart end return nil end
+local function STP(tc,md)local hr=GHRP()if not hr then return false end local d=(hr.Position-tc.Position).Magnitude local du=math.min(md,d/50)local ti=TweenInfo.new(du,Enum.EasingStyle.Linear,Enum.EasingDirection.Out,0,false,0)local s,r=pcall(function()local t=TS:Create(hr,ti,{CFrame=tc})t:Play()local c=false t.Completed:Connect(function()c=true end)local st=tick()while not c and tick()-st<du+2 do if getgenv().AF.S then t:Cancel()return false end RS.Heartbeat:Wait()end return c end)return s and r or false end
+local function SR(en,...)local rm=RSR:FindFirstChild(en)or WS:FindFirstChild(en)or game:GetService("Workspace"):FindFirstChild(en)if rm and rm:IsA("RemoteEvent")then local s,e=pcall(function()rm:FireServer(...)end)if not s then warn("RE Error:",en,e)end return s end return false end
+local function IR(fn,...)local rf=RSR:FindFirstChild(fn)if rf and rf:IsA("RemoteFunction")then local s,r=pcall(function()return rf:InvokeServer(...)end)if s then return r else warn("RF Error:",fn,r)end end return nil end
+task.spawn(function()while not CE.CF do CE.CF=require(RSR:WaitForChild("CombatFramework"))CE.CTR=CE.CF.activeController if CE.CTR then CE.ACTR=CE.CTR.anims break end task.wait(1)end end)
+local function OAS()if not CE.CTR then return end local at={"attack","heavyattack","skill1","skill2","skill3","skill4"}for _,an in pairs(at)do local ad=CE.CTR[an]if ad then if ad:IsA("NumberValue")then ad.Value=CE.AS elseif ad:IsA("ModuleScript")then local m=require(ad)if m.Cooldown then m.Cooldown=CE.AS end end end end if CE.ACTR then for _,tr in pairs(CE.ACTR:GetPlayingAnimationTracks())do tr:AdjustSpeed(2.5)end end end
+local function FA()if not CE.CTR or getgenv().AF.S then return end OAS()VIM:SendKeyEvent(true,Enum.KeyCode.E,false,nil)task.wait(CE.AS/2)VIM:SendKeyEvent(false,Enum.KeyCode.E,false,nil)VIM:SendKeyEvent(true,Enum.KeyCode.R,false,nil)task.wait(CE.AS/2)VIM:SendKeyEvent(false,Enum.KeyCode.R,false,nil)end
+local function FNM(r)local hr=GHRP()if not hr then return nil end local n=nil local nd=r for _,m in pairs(WS.Enemies:GetChildren())do if m:FindFirstChild("HumanoidRootPart")and m.Humanoid.Health>0 then local d=(hr.Position-m.HumanoidRootPart.Position).Magnitude if d<nd then nd=d n=m end end end return n end
+local function BMP(tp)local hr=GHRP()if not hr then return end getgenv().AF.B=true task.spawn(function()while getgenv().AF.B and not getgenv().AF.S do local m=FNM(CE.BMR)if m and m:FindFirstChild("HumanoidRootPart")then local bp=m.HumanoidRootPart.Position+(m.HumanoidRootPart.CFrame.LookVector*-5)hr.CFrame=CFrame.new(bp)FA()end RS.Heartbeat:Wait()end end)end
+local function AC()if not getgenv().RF.AC then return end task.spawn(function()while getgenv().RF.AC do VIM:SendMouseButtonEvent(0,0,0,true,false,game)task.wait(CV2.Melee.CD/2)VIM:SendMouseButtonEvent(0,0,0,false,false,game)local n=FNM(CV2.Melee.CR)if n and n:FindFirstChild("HumanoidRootPart")then local hr=Ch:FindFirstChild("HumanoidRootPart")if hr then hr.CFrame=CFrame.lookAt(hr.Position,n.HumanoidRootPart.Position)end end task.wait(CV2.Melee.CD)end end)end
+local function ACTP()if not getgenv().RF.CT then return end UIS.InputBegan:Connect(function(i,gp)if i.UserInputType==Enum.UserInputType.MouseButton2 and not gp then local tp=Mo.Hit.Position local hr=Ch:FindFirstChild("HumanoidRootPart")if hr then hr.CFrame=CFrame.new(tp+Vector3.new(0,5,0))end end end)end
+local function FAQ()local cs=GCS()local pl=GPL()local qn=QM.NPCs[cs]local tn=nil for i=#qn,1,-1 do local np=qn[i]if pl>=np.RL then tn=np QM.CQ=np break end end return tn end
+local function FAM()local cs=GCS()local pl=GPL()local mb=QM.Mobs[cs]local tm=nil for _,m in pairs(mb)do if pl>=m.LR[1]and pl<=m.LR[2]then tm=m QM.CM=m break end end return tm end
+local function AQR()getgenv().AF.Q=true task.spawn(function()while getgenv().AF.Q and not getgenv().AF.S do local np=FAQ()if np then STP(np.P,5)SW(1)SR("QuestAccepted",np.N)task.wait(0.5)local md=FAM()if md then STP(md.P,5)getgenv().AF.A=true local st=tick()while tick()-st<30 and not getgenv().AF.S do local nm=FNM(50)if nm then local mp=nm.HumanoidRootPart.CFrame STP(mp,1)FA()else local ro=Vector3.new(math.random(-20,20),0,math.random(-20,20))local np=md.P+ro STP(CFrame.new(np),2)end RS.Heartbeat:Wait()end getgenv().AF.A=false STP(np.P,5)SW(1)SR("QuestCompleted",np.N)end SW(2)end end)end
+local function BRC(cn)getgenv().AR.BC=true local cdp=CFrame.new(500,50,500)STP(cdp,5)SW(1)SR("PurchaseItem","RaidChip",cn,1)SW(2)getgenv().AR.BC=false return true end
+local function ER()local cs=GCS()local rl=RSys.RL[cs]if not rl then return false end STP(rl,5)SW(1)SR("StartRaid",RSys.CR)getgenv().AR.IR=true return true end
+local function RC()while getgenv().AR.IR and not getgenv().AF.S do local re=WS:FindFirstChild("RaidEnemies")if re then for _,e in pairs(re:GetChildren())do if e:FindFirstChild("HumanoidRootPart")and e.Humanoid.Health>0 then STP(e.HumanoidRootPart.CFrame,1)FA()if e.Humanoid.Health<=0 then RSys.CI=RSys.CI+1 if RSys.CI>#RSys.Is then getgenv().AR.IR=false return true end end end end end RS.Heartbeat:Wait()end end
+local function ARR(sc)RSys.CR=sc RSys.CI=1 task.spawn(function()if BRC(sc)then if ER()then RC()SR("ClaimRaidRewards")SW(2)end end end)end
+local EF=Instance.new("Folder")EF.Name="RedzESP"EF.Parent=CG
+local function CES(t,c,n)local h=Instance.new("Highlight")h.Name="ESP_"..n h.Adornee=t h.FillColor=c h.OutlineColor=Color3.new(1,1,1)h.FillTransparency=0.5 h.OutlineTransparency=0 h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop h.Parent=EF return h end
+local function UE()if getgenv().RF.ESP.P then for _,p in pairs(PS:GetPlayers())do if p~=Pl and p.Character then local ch=p.Character if ch:FindFirstChild("HumanoidRootPart")then if not EF:FindFirstChild("ESP_P_"..p.Name)then CES(ch,Color3.fromRGB(0,255,0),"P_"..p.Name)end end end end end
+if getgenv().RF.ESP.F then for _,f in pairs(WS:GetChildren())do if string.find(f.Name,"Fruit")or string.find(f.Name,"Blox Fruit")then if not EF:FindFirstChild("ESP_F_"..f.Name)then CES(f,Color3.fromRGB(255,0,255),"F_"..f.Name)end end end end
+if getgenv().RF.ESP.C then for _,c in pairs(WS:GetChildren())do if string.find(c.Name,"Chest")then if not EF:FindFirstChild("ESP_C_"..c.Name)then CES(c,Color3.fromRGB(255,215,0),"C_"..c.Name)end end end end end
+local function SFE()for en,ed in pairs(SEv.EL)do local em=WS:FindFirstChild(en)if em then ed.A=true ed.P=em:GetPivot()if not SEv.AE[en]then SEv.AE[en]=ed warn("⚠️ "..en.." detected!")end else ed.A=false SEv.AE[en]=nil end end end
+local function TTE(en)local ed=SEv.EL[en]if ed and ed.A then STP(ed.P,8)return true end return false end
+local function AFE(en)local ed=SEv.EL[en]if not ed then return end task.spawn(function()while SEv.EL[en].A and not getgenv().AF.S do TTE(en)local b=WS:FindFirstChild(en)if b and b:FindFirstChild("HumanoidRootPart")then STP(b.HumanoidRootPart.CFrame,1)FA()end RS.Heartbeat:Wait()end end)end
+local function GAP()local sf=Pl:FindFirstChild("Data")if sf then local p=sf:FindFirstChild("Points")if p then return p.Value end end return 0 end
+local function AS(sn,am)SR("AddPoint",sn,am)SW(0.2)end
+local function ASR()task.spawn(function()while getgenv().AS.E and not getgenv().AF.S do local p=GAP()if p>0 then for _,s in pairs(getgenv().AS.P)do if p<=0 then break end local aa=math.min(5,p)AS(s,aa)p=p-aa if p<=0 then break end end end SW(5)end end)end
+local function TTP(tp)local tc=tp.Character if tc and tc:FindFirstChild("HumanoidRootPart")then local hr=Ch:FindFirstChild("HumanoidRootPart")if hr then hr.CFrame=tc.HumanoidRootPart.CFrame*CFrame.new(0,0,5)end end end
+local function ATF()task.spawn(function()while getgenv().RF.TPF do for _,f in pairs(WS:GetChildren())do if f:FindFirstChild("Handle")and string.find(f.Name,"Fruit")then local hr=Ch:FindFirstChild("HumanoidRootPart")if hr then hr.CFrame=f.Handle.CFrame task.wait(0.5)end end end task.wait(2)end end)end
+local function ABR()task.spawn(function()while getgenv().RF.AB do for _,bn in pairs(BF.B)do local b=WS:FindFirstChild(bn)if b and b:FindFirstChild("HumanoidRootPart")then BF.CB=bn local bp=b.HumanoidRootPart.CFrame STP(bp,3)local st=tick()while tick()-st<60 and b:FindFirstChild("Humanoid")and b.Humanoid.Health>0 do for _,k in pairs({"Z","X","C","V","F"})do VIM:SendKeyEvent(true,Enum.KeyCode[k],false,nil)task.wait(0.1)VIM:SendKeyEvent(false,Enum.KeyCode[k],false,nil)end FA()local np=b.HumanoidRootPart.CFrame*CFrame.new(0,0,5)STP(np,0.5)task.wait(0.1)end SR("CollectBossDrop",bn)task.wait(5)end end task.wait(10)end end)end
+local function APH()if not getgenv().RF.ABH then return end local npp=CFrame.new(1000,50,1000)STP(npp,5)for _,c in pairs(SS.HC)do SR("PurchaseHaki",c)task.wait(0.5)end end
+local function APFS()if not getgenv().RF.ABFS then return end local npp=CFrame.new(1200,50,1200)STP(npp,5)for _,s in pairs(SS.FS)do SR("PurchaseFightingStyle",s)task.wait(0.5)end end
+local function AAF()local VU=game:GetService("VirtualUser")game:GetService("Players").LocalPlayer.Idled:Connect(function()VU:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)task.wait(1)VU:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)end)end
+local function RH()if not getgenv().RF.RH then return end task.spawn(function()local h=0 while getgenv().RF.RH do h=(h+0.01)%1 local c=Color3.fromHSV(h,1,1)local ch=Pl.Character if ch then for _,p in pairs(ch:GetChildren())do if p:IsA("BasePart")then p.Color=c end end end task.wait(0.1)end end)end
+local function IZ()if not getgenv().RF.IZ then return end local ca=workspace.CurrentCamera ca.CameraType=Enum.CameraType.Scriptable task.spawn(function()while getgenv().RF.IZ do ca.FieldOfView=5 task.wait()end ca.CameraType=Enum.CameraType.Custom ca.FieldOfView=70 end)end
+local function NC()if not getgenv().RF.NC then return end task.spawn(function()while getgenv().RF.NC do if Ch then for _,p in pairs(Ch:GetDescendants())do if p:IsA("BasePart")then p.CanCollide=false end end end task.wait(0.1)end end)end
+local W=Rayfield:CreateWindow({Name="📦 Redz Hub Premium",LoadingTitle="Loading...",LoadingSubtitle="v3.5 | Premium",ConfigurationSaving={Enabled=true,FolderName="RedzHub",FileName="Config"},Discord={Enabled=true,Invite="redz",RememberJoins=true},KeySystem=false})
+local MT=W:CreateTab("Main","rbxassetid://7733960981")MT:CreateSection("⚡ Farming")MT:CreateToggle({Name="Auto Farm",CurrentValue=false,Flag="AFT",Callback=function(v)getgenv().AF.Q=v if v then AQR()end end})MT:CreateToggle({Name="Fast Attack",CurrentValue=false,Flag="FAT",Callback=function(v)if v then OAS()task.spawn(function()while getgenv().AF.A do FA()RS.Heartbeat:Wait()end end)end end})MT:CreateToggle({Name="Bring Mob",CurrentValue=false,Flag="BMT",Callback=function(v)getgenv().AF.B=v if v then local hr=GHRP()if hr then BMP(hr.CFrame)end end end})MT:CreateSlider({Name="Attack Speed",Range={0.05,0.5},Increment=0.01,Suffix="s",CurrentValue=0.08,Flag="ASS",Callback=function(v)CE.AS=v OAS()end})
+local CT=W:CreateTab("Combat","rbxassetid://7733716863")CT:CreateSection("⚔️ Melee")CT:CreateToggle({Name="Auto Clicker",CurrentValue=false,Flag="ACT",Callback=function(v)getgenv().RF.AC=v if v then AC()end end})CT:CreateSlider({Name="Click Speed",Range={0.05,1},Increment=0.01,Suffix="s",CurrentValue=0.08,Flag="CSS",Callback=function(v)CV2.Melee.CD=v end})CT:CreateToggle({Name="Click TP",CurrentValue=false,Flag="CTT",Callback=function(v)getgenv().RF.CT=v if v then ACTP()end end})CT:CreateSection("🗡️ Skills")CT:CreateToggle({Name="Auto Z",CurrentValue=false,Flag="AZT",Callback=function(v)CV2.Sword.ZA=v end})CT:CreateToggle({Name="Auto X",CurrentValue=false,Flag="AXT",Callback=function(v)CV2.Sword.XA=v end})CT:CreateToggle({Name="Hold C",CurrentValue=false,Flag="HCT",Callback=function(v)CV2.Fruit.HFS=v end})
+local TT=W:CreateTab("Teleport","rbxassetid://7733674098")TT:CreateSection("📍 Islands")local SI="Starter"local ID=TT:CreateDropdown({Name="Select Island",Options={"Starter","Jungle","PirateV","Desert","FrozenV","SkyI"},CurrentOption="Starter",Flag="ISD",Callback=function(o)SI=o end})TT:CreateButton({Name="TP to Island",Callback=function()local ic=TDB.Is[SI]if ic then STP(ic,5)end end})TT:CreateSection("👤 Player")local PL={}for _,p in pairs(PS:GetPlayers())do if p~=Pl then table.insert(PL,p.Name)end end local SP=PL[1]or""local PD=TT:CreateDropdown({Name="Select Player",Options=PL,CurrentOption=PL[1]or"",Flag="PLD",Callback=function(o)SP=o end})TT:CreateButton({Name="TP to Player",Callback=function()local tp=PS:FindFirstChild(SP)if tp then TTP(tp)end end})
+local VT=W:CreateTab("Visual","rbxassetid://7733914997")VT:CreateSection("👁️ ESP")VT:CreateToggle({Name="Player ESP",CurrentValue=false,Flag="PET",Callback=function(v)getgenv().RF.ESP.P=v end})VT:CreateToggle({Name="Fruit ESP",CurrentValue=false,Flag="FET",Callback=function(v)getgenv().RF.ESP.F=v end})VT:CreateToggle({Name="Chest ESP",CurrentValue=false,Flag="CET",Callback=function(v)getgenv().RF.ESP.C=v end})VT:CreateToggle({Name="Rainbow Haki",CurrentValue=false,Flag="RHT",Callback=function(v)getgenv().RF.RH=v if v then RH()end end})
+local RT=W:CreateTab("Dungeon","rbxassetid://7733674098")RT:CreateSection("🏰 Raid")local SC="Flame"local CD=RT:CreateDropdown({Name="Select Chip",Options=RSys.RC,CurrentOption="Flame",Flag="RCD",Callback=function(o)SC=o RSys.CR=o end})RT:CreateToggle({Name="Auto Raid",CurrentValue=false,Flag="ART",Callback=function(v)getgenv().AR.E=v if v then ARR(SC)end end})RT:CreateButton({Name="Buy Chip",Callback=function()if RSys.CR then BRC(RSys.CR)end end})
+local ET=W:CreateTab("Sea Events","rbxassetid://7733914997")ET:CreateSection("🌊 Tracker")ET:CreateToggle({Name="Event Tracker",CurrentValue=false,Flag="SET",Callback=function(v)getgenv().SE.E=v if v then task.spawn(function()while getgenv().SE.E do SFE()SW(3)end end)end end})ET:CreateToggle({Name="Auto Sea Beast",CurrentValue=false,Flag="SBT",Callback=function(v)SEv.EL["SeaBeast"].AF=v if v then AFE("SeaBeast")end end})ET:CreateButton({Name="TP Sea Beast",Callback=function()TTE("SeaBeast")end})ET:CreateButton({Name="TP Leviathan",Callback=function()TTE("Leviathan")end})
+local BT=W:CreateTab("Auto Boss","rbxassetid://7733764265")BT:CreateSection("👹 Boss")BT:CreateToggle({Name="Auto Boss",CurrentValue=false,Flag="ABT",Callback=function(v)getgenv().RF.AB=v if v then ABR()end end})local SB="Saber"local BD=BT:CreateDropdown({Name="Select Boss",Options=BF.B,CurrentOption="Saber",Flag="BOSD",Callback=function(o)SB=o BF.CB=o end})BT:CreateButton({Name="TP to Boss",Callback=function()local bc=TDB.Boss[SB]if bc then STP(bc,5)end end})
+local ST=W:CreateTab("Shop","rbxassetid://7733960981")ST:CreateSection("🛒 Auto Buy")ST:CreateToggle({Name="Auto Haki",CurrentValue=false,Flag="AHT",Callback=function(v)getgenv().RF.ABH=v if v then APH()end end})ST:CreateToggle({Name="Auto Style",CurrentValue=false,Flag="AST",Callback=function(v)getgenv().RF.ABFS=v if v then APFS()end end})ST:CreateToggle({Name="Auto Codes",CurrentValue=false,Flag="ACT",Callback=function(v)getgenv().RF.ARC=v if v then local c={"SUB2GAMERROBOT","SUB2NOOBMASTER123","KITT_RESET"}for _,cd in pairs(c)do SR("RedeemCode",cd)task.wait(1)end end end})
+local STT=W:CreateTab("Auto Stats","rbxassetid://7733764265")STT:CreateSection("📊 Stats")STT:CreateToggle({Name="Auto Stats",CurrentValue=false,Flag="AST",Callback=function(v)getgenv().AS.E=v if v then ASR()end end})STT:CreateDropdown({Name="Priority 1",Options={"Melee","Defense","Sword","Fruit","Gun"},CurrentOption="Melee",Flag="P1D",Callback=function(o)getgenv().AS.P[1]=o end})STT:CreateButton({Name="+10 Melee",Callback=function()AS("Melee",10)end})STT:CreateButton({Name="+10 Defense",Callback=functio
