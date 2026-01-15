@@ -1,15 +1,4 @@
-local vu1 = loadstring(game:HttpGet("https://raw.githubusercontent.com/htzgamingssr/Spawn-Hub/refs/heads/main/Main-Gui-V5.lua"))()
-local vu2 = vu1:MakeWindow({
-    ["Title"] = "Redz Hub [Mod] : Blox Fruit",
-    ["SubTitle"] = "by Sea | Minh Hub",
-    ["ScriptFolder"] = "RedzMod"
-})
-vu2:NewMinimizer({
-    ["KeyCode"] = Enum.KeyCode.LeftControl
-}):CreateMobileMinimizer({
-    ["Image"] = "rbxassetid://87245917237197",
-    ["BackgroundColor3"] = Color3.fromRGB(0, 0, 0)
-})
+
 local v3 = vu2:MakeTab({
     "Discord",
     "rbxassetid://10723415903"
